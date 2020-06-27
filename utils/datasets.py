@@ -300,7 +300,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 assert len(s) == n, 'Shapefile out of sync'
         except:
             s = [exif_size(Image.open(f)) for f in tqdm(self.img_files, desc='Reading image shapes')]
-            np.savetxt(sp, s, fmt='%g')  # overwrites existing (if any)
+            # np.savetxt(sp, s, fmt='%g')  # overwrites existing (if any)
 
         self.shapes = np.array(s, dtype=np.float64)
 
