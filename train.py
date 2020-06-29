@@ -39,7 +39,7 @@ results_file = 'results.txt'
 
 # Hyperparameters
 hyp = {
-    'lr0': 0.01,  # initial learning rate (SGD=1E-2, Adam=1E-3)
+    'lr0': 1e-3,  # initial learning rate (SGD=1E-2, Adam=1E-3)
     'momentum': 0.937,  # SGD momentum
     'weight_decay': 5e-4,  # optimizer weight decay
     'giou': 0.05,  # giou loss gain
@@ -102,22 +102,29 @@ def train(hyp):
     nbs = 64  # nominal batch size
     accumulate = max(round(nbs / batch_size), 1)  # accumulate loss before optimizing
     hyp['weight_decay'] *= batch_size * accumulate / nbs  # scale weight_decay
-    pg0, pg1, pg2 = [], [], []  # optimizer parameter groups
-    for k, v in model.named_parameters():
-        if v.requires_grad:
-            if '.bias' in k:
-                pg2.append(v)  # biases
-            elif '.weight' in k and '.bn' not in k:
-                pg1.append(v)  # apply weight decay
-            else:
-                pg0.append(v)  # all else
 
-    optimizer = optim.Adam(pg0, lr=hyp['lr0']) if opt.adam else \
-        optim.SGD(pg0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
-    optimizer.add_param_group({'params': pg1, 'weight_decay': hyp['weight_decay']})  # add pg1 with weight_decay
-    optimizer.add_param_group({'params': pg2})  # add pg2 (biases)
-    print('Optimizer groups: %g .bias, %g conv.weight, %g other' % (len(pg2), len(pg1), len(pg0)))
-    del pg0, pg1, pg2
+    using_adam = True
+    if using_adam:
+        pg0, pg1, pg2 = [], [], []  # optimizer parameter groups
+        for k, v in model.named_parameters():
+            if v.requires_grad:
+                if '.bias' in k:
+                    pg2.append(v)  # biases
+                elif '.weight' in k and '.bn' not in k:
+                    pg1.append(v)  # apply weight decay
+                else:
+                    pg0.append(v)  # all else
+
+        # optimizer = optim.Adam(pg0, lr=hyp['lr0']) if opt.adam else \
+        #     optim.SGD(pg0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
+        optimizer = optim.Adam(pg0, lr=hyp['lr0'])
+        optimizer.add_param_group({'params': pg1, 'weight_decay': hyp['weight_decay']})  # add pg1 with weight_decay
+        optimizer.add_param_group({'params': pg2})  # add pg2 (biases)
+        print('Optimizer groups: %g .bias, %g conv.weight, %g other' % (len(pg2), len(pg1), len(pg0)))
+        del pg0, pg1, pg2
+    else:
+        from radam import Over9000
+        optimizer = Over9000(model.parameters(), lr=hyp['lr0'], weight_decay=hyp['weight_decay'])
 
     # Load Model
     google_utils.attempt_download(weights)
@@ -151,13 +158,6 @@ def train(hyp):
     # Mixed precision training https://github.com/NVIDIA/apex
     if mixed_precision:
         model, optimizer = amp.initialize(model, optimizer, opt_level='O1', verbosity=0)
-
-    # Scheduler https://arxiv.org/pdf/1812.01187.pdf
-    lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
-    scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
-    scheduler.last_epoch = start_epoch - 1  # do not move
-    # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
-    # plot_lr_scheduler(optimizer, scheduler, epochs)
 
     # Initialize distributed training
     if device.type != 'cpu' and torch.cuda.device_count() > 1 and torch.distributed.is_available():
@@ -200,6 +200,23 @@ def train(hyp):
                                              num_workers=nw,
                                              pin_memory=True,
                                              collate_fn=dataset.collate_fn)
+
+
+    # Scheduler https://arxiv.org/pdf/1812.01187.pdf
+    # lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
+    # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    # scheduler.last_epoch = start_epoch - 1  # do not move
+    # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
+    # plot_lr_scheduler(optimizer, scheduler, epochs)
+
+    scheduler = lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=hyp['lr0'],
+        steps_per_epoch=int(len(dataset) / batch_size),
+        epochs=epochs-start_epoch,
+        pct_start=0.1,
+    )
+    scheduler.last_epoch = start_epoch - 1
 
     # Model parameters
     hyp['cls'] *= nc / 80.  # scale coco-tuned hyp['cls'] to current dataset
@@ -257,7 +274,12 @@ def train(hyp):
                 accumulate = max(1, np.interp(ni, xi, [1, nbs / batch_size]).round())
                 for j, x in enumerate(optimizer.param_groups):
                     # bias lr falls from 0.1 to lr0, all other lrs rise from 0.0 to lr0
-                    x['lr'] = np.interp(ni, xi, [0.1 if j == 2 else 0.0, x['initial_lr'] * lf(epoch)])
+
+                    # curr_lr = lf(epoch)
+                    # curr_lr = optimizer.param_groups[0]['lr']
+                    curr_lr = scheduler.get_last_lr()[0]
+                    # print(curr_lr)
+                    x['lr'] = np.interp(ni, xi, [0.1 if j == 2 else 0.0, x['initial_lr'] * curr_lr])
                     if 'momentum' in x:
                         x['momentum'] = np.interp(ni, xi, [0.9, hyp['momentum']])
 
