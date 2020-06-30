@@ -39,7 +39,7 @@ results_file = 'results.txt'
 
 # Hyperparameters
 hyp = {
-    'lr0': 1e-2,  # initial learning rate (SGD=1E-2, Adam=1E-3)
+    'lr0': 1e-3,  # initial learning rate (SGD=1E-2, Adam=1E-3)
     'momentum': 0.937,  # SGD momentum
     'weight_decay': 5e-4,  # optimizer weight decay
     'giou': 0.05,  # giou loss gain
@@ -118,6 +118,7 @@ def train(hyp):
         # optimizer = optim.Adam(pg0, lr=hyp['lr0']) if opt.adam else \
         #     optim.SGD(pg0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
         optimizer = optim.Adam(pg0, lr=hyp['lr0'])
+        # optimizer = optim.SGD(pg0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
         optimizer.add_param_group({'params': pg1, 'weight_decay': hyp['weight_decay']})  # add pg1 with weight_decay
         optimizer.add_param_group({'params': pg2})  # add pg2 (biases)
         print('Optimizer groups: %g .bias, %g conv.weight, %g other' % (len(pg2), len(pg1), len(pg0)))
@@ -214,7 +215,7 @@ def train(hyp):
         max_lr=hyp['lr0'],
         steps_per_epoch=int(len(dataset) / batch_size),
         epochs=epochs-start_epoch,
-        pct_start=0.1,
+        pct_start=0.3,
     )
     scheduler.last_epoch = start_epoch - 1
 
@@ -318,7 +319,7 @@ def train(hyp):
             mem = '%.3gG' % (torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0)  # (GB)
             s = ('%10s' * 2 + '%10.4g' * 6) % (
                 '%g/%g' % (epoch, epochs - 1), mem, *mloss, targets.shape[0], imgs.shape[-1])
-            pbar.set_description(s)
+            pbar.set_description(s + f", {curr_lr}")
 
             # Plot
             if ni < 3:
@@ -330,8 +331,8 @@ def train(hyp):
 
             # end batch ------------------------------------------------------------------------------------------------
 
-        # Scheduler
-        scheduler.step()
+            # Scheduler
+            scheduler.step()
 
         # mAP
         ema.update_attr(model)
