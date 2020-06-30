@@ -39,7 +39,7 @@ results_file = 'results.txt'
 
 # Hyperparameters
 hyp = {
-    'lr0': 1e-3,  # initial learning rate (SGD=1E-2, Adam=1E-3)
+    'lr0': 1e-2,  # initial learning rate (SGD=1E-2, Adam=1E-3)
     'momentum': 0.937,  # SGD momentum
     'weight_decay': 5e-4,  # optimizer weight decay
     'giou': 0.05,  # giou loss gain
@@ -117,8 +117,8 @@ def train(hyp):
 
         # optimizer = optim.Adam(pg0, lr=hyp['lr0']) if opt.adam else \
         #     optim.SGD(pg0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
-        optimizer = optim.Adam(pg0, lr=hyp['lr0'])
-        # optimizer = optim.SGD(pg0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
+        # optimizer = optim.Adam(pg0, lr=hyp['lr0'])
+        optimizer = optim.SGD(pg0, lr=hyp['lr0'], momentum=hyp['momentum'], nesterov=True)
         optimizer.add_param_group({'params': pg1, 'weight_decay': hyp['weight_decay']})  # add pg1 with weight_decay
         optimizer.add_param_group({'params': pg2})  # add pg2 (biases)
         print('Optimizer groups: %g .bias, %g conv.weight, %g other' % (len(pg2), len(pg1), len(pg0)))
