@@ -204,20 +204,20 @@ def train(hyp):
 
 
     # Scheduler https://arxiv.org/pdf/1812.01187.pdf
-    # lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
-    # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
-    # scheduler.last_epoch = start_epoch - 1  # do not move
+    lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
+    scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    scheduler.last_epoch = start_epoch - 1  # do not move
     # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
     # plot_lr_scheduler(optimizer, scheduler, epochs)
 
-    scheduler = lr_scheduler.OneCycleLR(
-        optimizer,
-        max_lr=hyp['lr0'],
-        steps_per_epoch=int(len(dataset) / batch_size),
-        epochs=epochs-start_epoch,
-        pct_start=0.3,
-    )
-    scheduler.last_epoch = start_epoch - 1
+    # scheduler = lr_scheduler.OneCycleLR(
+    #     optimizer,
+    #     max_lr=hyp['lr0'],
+    #     steps_per_epoch=int(len(dataset) // batch_size),
+    #     epochs=epochs-start_epoch,
+    #     pct_start=0.3,
+    # )
+    # scheduler.last_epoch = start_epoch - 1
 
     # Model parameters
     hyp['cls'] *= nc / 80.  # scale coco-tuned hyp['cls'] to current dataset
