@@ -53,7 +53,7 @@ hyp = {
     'hsv_h': 0.014,  # image HSV-Hue augmentation (fraction)
     'hsv_s': 0.68,  # image HSV-Saturation augmentation (fraction)
     'hsv_v': 0.36,  # image HSV-Value augmentation (fraction)
-    'degrees': 10.0,  # image rotation (+/- deg)
+    'degrees': 0.0,  # image rotation (+/- deg)
     'translate': 0.1,  # image translation (+/- fraction)
     'scale': 0.5,  # image scale (+/- gain)
     'shear': 0.0,  # image shear (+/- deg)
@@ -331,8 +331,8 @@ def train(hyp):
 
             # end batch ------------------------------------------------------------------------------------------------
 
-            # Scheduler
-            scheduler.step()
+        # Scheduler
+        scheduler.step()
 
         # mAP
         ema.update_attr(model)
