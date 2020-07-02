@@ -319,7 +319,8 @@ def train(hyp):
             mem = '%.3gG' % (torch.cuda.memory_cached() / 1E9 if torch.cuda.is_available() else 0)  # (GB)
             s = ('%10s' * 2 + '%10.4g' * 6) % (
                 '%g/%g' % (epoch, epochs - 1), mem, *mloss, targets.shape[0], imgs.shape[-1])
-            pbar.set_description(s + f", {curr_lr}")
+            # pbar.set_description(s + f", {curr_lr}")
+            pbar.set_description(s)
 
             # Plot
             if ni < 3:
