@@ -203,9 +203,30 @@ def train(hyp):
                                              collate_fn=dataset.collate_fn)
 
 
+    # # Scheduler https://arxiv.org/pdf/1812.01187.pdf
+    # lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
+    # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    # scheduler.last_epoch = start_epoch - 1  # do not move
+    # # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
+    # # plot_lr_scheduler(optimizer, scheduler, epochs)
+
+    LR_START = hyp['lr0'] / 25
+    LR_MAX = hyp['lr0']
+    LR_MIN = hyp['lr0'] / 1000
+    LR_RAMPUP_EPOCHS = epochs // 3
+    LR_SUSTAIN_EPOCHS = 0
+    LR_EXP_DECAY = .6
+
+    def lrfn(epoch):
+        if epoch < LR_RAMPUP_EPOCHS:
+            lr = (LR_MAX - LR_START) / LR_RAMPUP_EPOCHS * epoch + LR_START
+        elif epoch < LR_RAMPUP_EPOCHS + LR_SUSTAIN_EPOCHS:
+            lr = LR_MAX
+        else:
+            lr = (LR_MAX - LR_MIN) * LR_EXP_DECAY ** (epoch - LR_RAMPUP_EPOCHS - LR_SUSTAIN_EPOCHS) + LR_MIN
+        return lr
     # Scheduler https://arxiv.org/pdf/1812.01187.pdf
-    lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
-    scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lrfn)
     scheduler.last_epoch = start_epoch - 1  # do not move
     # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
     # plot_lr_scheduler(optimizer, scheduler, epochs)
