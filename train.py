@@ -431,7 +431,7 @@ def train(hyp):
 if __name__ == '__main__':
     check_git_status()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lr', type=int, default=1e-2)
+    parser.add_argument('--lr', type=float, default=1e-2)
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--start_from_zero', action='store_true')
     parser.add_argument('--batch-size', type=int, default=16)
