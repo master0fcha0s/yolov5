@@ -433,7 +433,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--lr', type=int, default=1e-2)
     parser.add_argument('--epochs', type=int, default=300)
-    parser.add_argument('--start_from_zero', type=int, default=-1)
+    parser.add_argument('--start_from_zero', action='store_true')
     parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--cfg', type=str, default='models/yolov5s.yaml', help='*.cfg path')
     parser.add_argument('--data', type=str, default='data/coco128.yaml', help='*.data path')
