@@ -274,7 +274,7 @@ def train(hyp):
     results = (0, 0, 0, 0, 0, 0, 0)  # 'P', 'R', 'mAP', 'F1', 'val GIoU', 'val Objectness', 'val Classification'
     print('Image sizes %g train, %g test' % (imgsz, imgsz_test))
     print('Using %g dataloader workers' % nw)
-    print('Starting training for %g epochs...' % epochs)
+    print('Starting training for %g epochs from %g...' % (epochs, start_epoch))
     # torch.autograd.set_detect_anomaly(True)
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         model.train()
