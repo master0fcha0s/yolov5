@@ -154,9 +154,9 @@ def train(hyp):
                 file.write(ckpt['training_results'])  # write results.txt
 
         if opt.start_from_zero:
-            start_epoch = ckpt['epoch'] + 1
-        else:
             start_epoch = 0
+        else:
+            start_epoch = ckpt['epoch'] + 1
         del ckpt
 
     # Mixed precision training https://github.com/NVIDIA/apex
