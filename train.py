@@ -39,7 +39,7 @@ results_file = 'results.txt'
 
 # Hyperparameters
 hyp = {
-    'lr0': 1e-2,  # initial learning rate (SGD=1E-2, Adam=1E-3)
+    # 'lr0': 1e-2,  # initial learning rate (SGD=1E-2, Adam=1E-3)
     'momentum': 0.937,  # SGD momentum
     'weight_decay': 5e-4,  # optimizer weight decay
     'giou': 0.05,  # giou loss gain
@@ -127,6 +127,43 @@ def train(hyp):
         from radam import Over9000
         optimizer = Over9000(model.parameters(), lr=hyp['lr0'], weight_decay=hyp['weight_decay'])
 
+        # Scheduler https://arxiv.org/pdf/1812.01187.pdf
+        lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
+        scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+        scheduler.last_epoch = start_epoch - 1  # do not move
+        # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
+        # plot_lr_scheduler(optimizer, scheduler, epochs)
+
+        # LR_START = hyp['lr0'] / 25
+        # LR_MAX = hyp['lr0']
+        # LR_MIN = hyp['lr0'] / 1000
+        # LR_RAMPUP_EPOCHS = epochs // 3
+        # LR_SUSTAIN_EPOCHS = 0
+        # LR_EXP_DECAY = .6
+        #
+        # def lrfn(epoch):
+        #     if epoch < LR_RAMPUP_EPOCHS:
+        #         lr = (LR_MAX - LR_START) / LR_RAMPUP_EPOCHS * epoch + LR_START
+        #     elif epoch < LR_RAMPUP_EPOCHS + LR_SUSTAIN_EPOCHS:
+        #         lr = LR_MAX
+        #     else:
+        #         lr = (LR_MAX - LR_MIN) * LR_EXP_DECAY ** (epoch - LR_RAMPUP_EPOCHS - LR_SUSTAIN_EPOCHS) + LR_MIN
+        #     return lr
+        # # Scheduler https://arxiv.org/pdf/1812.01187.pdf
+        # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lrfn)
+        # scheduler.last_epoch = start_epoch - 1  # do not move
+        # # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
+        # # plot_lr_scheduler(optimizer, scheduler, epochs)
+
+        # scheduler = lr_scheduler.OneCycleLR(
+        #     optimizer,
+        #     max_lr=hyp['lr0'],
+        #     steps_per_epoch=int(len(dataset) // batch_size),
+        #     epochs=epochs-start_epoch,
+        #     pct_start=0.3,
+        # )
+        # scheduler.last_epoch = start_epoch - 1
+
     # Load Model
     google_utils.attempt_download(weights)
     start_epoch, best_fitness = 0, 0.0
@@ -201,44 +238,6 @@ def train(hyp):
                                              num_workers=nw,
                                              pin_memory=True,
                                              collate_fn=dataset.collate_fn)
-
-
-    # Scheduler https://arxiv.org/pdf/1812.01187.pdf
-    lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
-    scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
-    scheduler.last_epoch = start_epoch - 1  # do not move
-    # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
-    # plot_lr_scheduler(optimizer, scheduler, epochs)
-
-    # LR_START = hyp['lr0'] / 25
-    # LR_MAX = hyp['lr0']
-    # LR_MIN = hyp['lr0'] / 1000
-    # LR_RAMPUP_EPOCHS = epochs // 3
-    # LR_SUSTAIN_EPOCHS = 0
-    # LR_EXP_DECAY = .6
-    #
-    # def lrfn(epoch):
-    #     if epoch < LR_RAMPUP_EPOCHS:
-    #         lr = (LR_MAX - LR_START) / LR_RAMPUP_EPOCHS * epoch + LR_START
-    #     elif epoch < LR_RAMPUP_EPOCHS + LR_SUSTAIN_EPOCHS:
-    #         lr = LR_MAX
-    #     else:
-    #         lr = (LR_MAX - LR_MIN) * LR_EXP_DECAY ** (epoch - LR_RAMPUP_EPOCHS - LR_SUSTAIN_EPOCHS) + LR_MIN
-    #     return lr
-    # # Scheduler https://arxiv.org/pdf/1812.01187.pdf
-    # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lrfn)
-    # scheduler.last_epoch = start_epoch - 1  # do not move
-    # # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
-    # # plot_lr_scheduler(optimizer, scheduler, epochs)
-
-    # scheduler = lr_scheduler.OneCycleLR(
-    #     optimizer,
-    #     max_lr=hyp['lr0'],
-    #     steps_per_epoch=int(len(dataset) // batch_size),
-    #     epochs=epochs-start_epoch,
-    #     pct_start=0.3,
-    # )
-    # scheduler.last_epoch = start_epoch - 1
 
     # Model parameters
     hyp['cls'] *= nc / 80.  # scale coco-tuned hyp['cls'] to current dataset
@@ -428,6 +427,7 @@ def train(hyp):
 if __name__ == '__main__':
     check_git_status()
     parser = argparse.ArgumentParser()
+    parser.add_argument('--lr', type=int, default=1e-2)
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--cfg', type=str, default='models/yolov5s.yaml', help='*.cfg path')
@@ -448,6 +448,7 @@ if __name__ == '__main__':
     parser.add_argument('--multi-scale', action='store_true', help='vary img-size +/- 50%')
     parser.add_argument('--single-cls', action='store_true', help='train as single-class dataset')
     opt = parser.parse_args()
+    hyp['lr0'] = opt.lr
     opt.weights = last if opt.resume else opt.weights
     opt.cfg = check_file(opt.cfg)  # check file
     opt.data = check_file(opt.data)  # check file
