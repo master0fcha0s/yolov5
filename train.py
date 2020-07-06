@@ -153,7 +153,7 @@ def train(hyp):
             with open(results_file, 'w') as file:
                 file.write(ckpt['training_results'])  # write results.txt
 
-        if opt.start_from_zero == -1:
+        if opt.start_from_zero:
             start_epoch = ckpt['epoch'] + 1
         else:
             start_epoch = 0
